@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Taki Game</title>
+    <link href="StyleSheet.css" rel="stylesheet" />
+
+    <script>
+            // @colors represents the color types.
+            // @types represents the card types.
+            // @cashier represents the cards deck - cashier.
+            // @tableDeck represents the card's array inserted by the players.
+            // @player1,player2 represents the players in the game.
+            // @chosenColor represents the color that is picked when color changer is clicked.
+            // @glob represents an array thats save all cards in the same color of taki card in player array.
+            // @timeSeconds represents the time for player1 turn.
+            // @boolStart represents if we in a game.
+            colors = ["yellow", "blue", "red", "green"];
+            types = [1, 3, 4, 5, 6, 7, 8, 9,"changesDirection", "2plush", "stop", "taki"];
+            var cashier;
+            var player1;
+            var player2;
+            var tableDeck = [];
+            var chosenColor = "";
+            var glob = [];
+            var timeSeconds;
+            var boolStart = false;
+
+            // Card constructor.
+            function Card(type,color){
+                this.type = type;
+                this.color = color;
+                this.image = 'images/' + type + '_' + color +'.jpg';
+                this.isSameColor = function(card){ // boolean func that return ture if they got the same color.
+                    return (card.color == this.color);
+                }
+                this.isSameType = function(card){ // boolean func that return ture if they got the same type.
+                    return (card.type == this.type);
+                }
+                this.render = function(){ //function that creates an img object with function.
+                    return '<img src="' + this.image + '" onclick="playerClick(this)" />';
+                }
+                this.renderWOclick = function(){ //function that creates an img object without onclick function.
+                    return '<img src="images/card.jpg"/>'; //render for computer.
+                }
+            }
+
+            // Deck-Cashier constructor.
+            function Deck(){
+                this.cards = [];
+                this.createCashier = function(){
+                    for (var i = 0; i < types.length; i++){
+                        for (var j = 0; j < colors.length; j++){
+                            this.cards.push(new Card(types[i],colors[j]));
+                        }
+                    }
+                    //Pushing the last two cards.
+                    this.cards.push(new Card('color','changer'));
+                    this.cards.push(new Card('color','changer'));
+                }
+
+                //shuffling the cashier cards.
+                this.shuffle = function(){
+                    for (var i = this.cards.length - 1; i > 0; i--) {
+                        var j = Math.floor(Math.random() * (i + 1));
+                        var temp = this.cards[i];
+                        this.cards[i] = this.cards[j];
+                        this.cards[j] = temp;
+                    }
+                }
+
+                this.removeCard = function (card){
+                    var index = this.cards.indexOf(card);
+                    this.cards.splice(index,1);
+                }
+
+                this.addCard = function(card){
+                    this.cards.push(card);
+                }
+
+                this.pop = function (){
+                    return this.cards.pop();
+                }
+                //Providing 8 cards.
+                this.pop8Cards = function(){
+                    var playerCards =[];
+                    for (var i = 0; i < 8; i++){
+                        playerCards.push(this.pop())
+                    }
+                    return playerCards;
+                }
+            }
+
+            // Player constructor.
+            function Player(cards){
+                this.cards = cards;
+
+                this.render = function(){
+                    var str= "";
+                    for (var i = 0; i < this.cards.length; i++){ 
+                        str+= this.cards[i].render();
+                    }
+                    return str;
+                }
+
+                this.renderWOclick = function(){ //render for computer.
+                    var str= "";
+                    for (var i = 0; i < this.cards.length; i++){
+                        str+= this.cards[i].renderWOclick();
+                    }
+                    return str;
+                }
+                
+                this.addCard = function(card){
+                    this.cards.push(card);
+                }
+
+                this.removeCard = function (card){
+                    var index = this.cards.indexOf(card);
+                    this.cards.splice(index,1);
+                }
+                //this function returns the card which is clicked by a player.
+                this.getCard = function (imgSrc){
+                    for (var i = 0; i < this.cards.length; i++){
+                        if (imgSrc == this.cards[i].image){
+                            return this.cards[i];
+                        }
+                    }
+                    return null; // if we dont found card with the same src then we retun null.
+                }
+                this.searchCard = function(type,color){
+                    for (var i = 0; i < this.cards.length; i++){
+                        if (type == this.cards[i].type && color == this.cards[i].color){
+                            return this.cards[i];
+                        }
+                    }
+                    return null;
+                }
+                this.searchCardByColor = function(color){
+                    for (var i = 0; i < this.cards.length; i++){
+                        if (color == this.cards[i].color){
+                            return this.cards[i];
+                        }
+                    }
+                    return null;
+                }
+                this.searchCardByType = function(type){
+                    for (var i = 0; i < this.cards.length; i++){
+                        if (type == this.cards[i].type){
+                            return this.cards[i];
+                        }
+                    }
+                    return null;
+                }
+            }
+
+            // show all the cards on the screen.
+            function showCards(){
+                var str = '<div id="player1" class="turn"> <h3>Player1</h3>';
+                str += player1.render();//render is method that creates the img objects.
+                str += '</div><div class="center"><img id="Cashier" src="images/cashier.jpg" onclick = "getCardFromCashier()"/>';
+                str += '<img src="'+ tableDeck[tableDeck.length - 1].image +'"/>' + '</div><div id="player2" class="turn">';
+                str += player2.renderWOclick();
+                str += '<h3>Computer</h3> </div> <div id="color" class="center"></div> <br>';
+                str += '<br><div class ="center"> <hr><input type ="button" value="Home page" onclick="homePage()"> <br><br> <input type ="button" value="New game" onclick="newGame()"> </div>';
+                document.getElementById("Deck").innerHTML = str;
+            }
+
+            // show all cards on the screen and put frame on computer.
+            function showComputerTurn(){ 
+                showCards();
+                document.getElementById("player1").className = "center";
+            }
+
+            // start function on load.
+            function start(){
+                homePage();
+                timeSeconds = 20;
+                setInterval(() => {
+                    if (boolStart){
+                        if (timeSeconds < 0){
+                            player1.addCard(cashier.pop());
+                            showCards();
+                            disablePlayer("player1");
+                            setTimeout('computer()', 2000);
+                            saveGame();
+                        }
+                        if (document.getElementById("player1").className == "turn"){
+                            document.getElementById("player1").getElementsByTagName("h3")[0].innerHTML = "Player1, Time left:" + timeSeconds;
+                            timeSeconds--;
+                        }
+                        else{
+                            timeSeconds = 20;
+                            document.getElementById("player1").getElementsByTagName("h3")[0].innerHTML = "Player1";
+                        }
+                    }
+                }, 1000);
+            }
+
+            // print home page.
+            function homePage(){
+                boolStart = false;
+                document.getElementById("Deck").innerHTML = '<div class="center"><h1>Welcome to our Taki game!</h1> <img class="big" src="images/taki.jpg"/> <br> (You got a frame? It' + "'"+'s your turn!) <br><br><input type="button" value="Previous game" onclick="previousGame()"></div>';
+                document.getElementById("Deck").innerHTML += '<br><div class = "center"><input type="button" value="New game" onclick="newGame()"> </div>'; 
+            }
+
+            // initializes all the variables to a previous game.
+            function previousGame(){
+                var toDisPlayer = initPrevious();
+                showCards();
+                disablePlayer(toDisPlayer);
+                saveGame();
+                timeSeconds = 20;
+                boolStart = true;
+            }
+
+            // initializes all the variables to start a new game.
+            function newGame(){
+                init();
+                showCards();
+                disablePlayer("player2");
+                saveGame();
+                timeSeconds = 20;
+                boolStart = true;
+            }
+
+            // function that save the current game in local storage for next time.
+            function saveGame(){
+                var divPlayer1Class = document.getElementById("player1").className;
+                if (divPlayer1Class == "center"){
+                    game=[player1.cards,player2.cards,cashier.cards,tableDeck,"player1"];
+                }
+                else game=[player1.cards,player2.cards,cashier.cards,tableDeck,"player2"];
+                localStorage.setItem("game",JSON.stringify(game));
+            }
+
+            // initializes all the variables before a new game.
+            function init(){
+                cashier = new Deck();
+                cashier.createCashier();
+                cashier.shuffle();
+                player1 = new Player(cashier.pop8Cards());
+                player2 = new Player(cashier.pop8Cards());
+                tableDeck = [];
+                tableDeck.push(cashier.pop());
+                while (tableDeck[tableDeck.length-1].type == 'color'){
+                    cashier.addCard(tableDeck[tableDeck.length-1]);
+                    tableDeck = [];
+                    cashier.shuffle();
+                    tableDeck.push(cashier.pop());
+                }
+            }
+            
+            // initializes all the variables before a previous game.
+            function initPrevious(){
+                if (localStorage.getItem("game") != undefined){
+                    game=JSON.parse(localStorage.getItem("game"));
+                    player1 = new Player([]);
+                    player2 = new Player([]);
+                    cashier = new Deck();
+                    arrayToObj(player1, game[0]);
+                    arrayToObj(player2, game[1]);
+                    arrayToObj(cashier, game[2]);
+                    tableDeck = [];
+                    for(var i = 0; i < game[3].length; i++){
+                        tableDeck.push(new Card(game[3][i].type,game[3][i].color));
+                    }
+                    return game[4];
+                }
+
+                alert("There is no previous game. Therefore we start new game.");
+                init();
+                return "player2";
+            }
+
+            // became an array to cards array.
+            function arrayToObj(Obj, array){
+                for(var i = 0; i < array.length; i++){
+                    Obj.addCard(new Card(array[i].type,array[i].color));
+                }
+            }
+
+            // onclick event for player 1 cards.
+            function playerClick(img){
+                var card = player1.getCard(img.getAttribute('src'));
+                actions(card ,player1 ,player2 ,"player1" ,"player2");
+            }
+
+            //checking the player card against table deck card and action according the rules.
+            //@currentPlayer - represents the player who click by it's string.
+            //@checkColorCard - represents if player choose the right color card by color changer.
+            //@playerObj - represents the player object that it's his turn.
+            //@otherPlayer - represents the other player.
+            //@card - represents the card which is clicked. 
+            // action according the rules.
+            function actions(card ,playerObj ,otherPlayerobj ,currentPlayer ,otherPlayer){
+                var checkColorCard = 0;
+                var tableCard = tableDeck[tableDeck.length-1];
+
+                if (tableCard.type == "color"){
+                    if (chosenColor == card.color){
+                        checkColorCard = 1;
+                    }   
+                }
+                if (card.type == "color"){
+                    tableDeck.push(card);
+                    playerObj.removeCard(card);
+                    if (currentPlayer == "player1"){
+                        alert("You need to choose a color. Go down and choose.");
+                        chooseColor();
+                    }
+                    else {
+                        chosenColor = getMostColor();
+                        alert("The computer choose the color " + chosenColor+ " .");
+                        showCards();
+                        disablePlayer("player2");
+                        saveGame();
+                    }
+                    checkWinner();
+                    return;
+                }
+
+                if (card.isSameColor(tableCard) || card.isSameType(tableCard) || checkColorCard == 1){
+                    if (card.type == '2plush'){
+                        tableDeck.push(card);
+                        playerObj.removeCard(card);
+                        if (cashier.cards.length < 2){
+                            fillCashier();
+                        }
+                        if (cashier.cards.length < 2){
+                            alert("The cashier is out of cards, all the cards is with you and with other player. You are moved to home page.");
+                            homePage();
+                            return;
+                        }
+                        otherPlayerobj.addCard(cashier.pop());
+                        otherPlayerobj.addCard(cashier.pop());
+                    }
+
+                    else if (card.type == "stop" || card.type == "changesDirection"){
+                        tableDeck.push(card);
+                        playerObj.removeCard(card);
+                        currentPlayer = otherPlayer;
+                    }
+                    //@tmpCards- represents the cards array that we will insert to tabledeck when taki is clicked.
+                    else if (card.type == "taki"){
+                        tableDeck.push(card);
+                        playerObj.removeCard(card);
+                        var tmpCards = [];
+                        for (var i = 0; i < playerObj.cards.length; i++){
+                            if (playerObj.cards[i].isSameColor(card)){
+                                tmpCards.push(playerObj.cards[i])
+                            }
+                        }
+
+                        if (currentPlayer == "player2"){
+                            glob = tmpCards;
+                            for (var i = 0; i < glob.length; i++){
+                                setTimeout('showComputerTurn()',1);
+                                if (i == glob.length - 1){
+                                    setTimeout('showCards()',2001 + 2000*i);
+                                    setTimeout('disablePlayer("player2")',2002 + 2000*i);
+                                    setTimeout('checkWinner()',2003 + 2000*i);
+                                }
+                               setTimeout('takiAction(glob['+ i +'])',2000 + 2000*i);
+                            }
+                        }
+                        else {
+                            for (var i = 0; i < tmpCards.length; i++){
+                                tableDeck.push(tmpCards[i]);
+                                player1.removeCard(tmpCards[i]);
+                            }
+                        }
+                    }
+
+                    else{
+                        tableDeck.push(card);
+                        playerObj.removeCard(card);
+                    }
+                }
+                else {
+                    if (cashier.cards.length == 0){
+                        fillCashier();
+                    }
+                    if (cashier.cards.length == 0){
+                        alert("The cashier is out of cards, all the cards is with you and with other player. You are moved to home page.");
+                        homePage();
+                        return;
+                    }
+                    playerObj.addCard(cashier.pop());
+                }
+                showCards();
+                disablePlayer(currentPlayer);
+                //In every playerClick we check if someone won.
+                if (checkWinner()){
+                    return;
+                }
+                //Disabling the current player so he cant click next turn.
+                if(currentPlayer==otherPlayer && currentPlayer=="player1"){
+                    saveGame();
+                    setTimeout("computer()", 2000);
+                    return;
+                }
+                saveGame();
+
+                if(currentPlayer=="player1")
+                    setTimeout("computer()", 2000);
+            }
+
+            // method for push cards after 'taki' card. 
+            function takiAction(card){
+                tableDeck.push(card);
+                player2.removeCard(card);
+                showComputerTurn();
+            }
+
+            // method of computer card selection.
+            function computer(){
+                lastCardObj = tableDeck[tableDeck.length-1];
+                if (lastCardObj.type == 'color'){
+                    lastCardObj = new Card("color", chosenColor);
+                }
+
+                let takiCard = player2.searchCard('taki',lastCardObj.color);
+                if (takiCard != null || lastCardObj.type == "taki"){
+                    if (takiCard == null)
+                        takiCard = player2.searchCardByType('taki');
+                    if (takiCard != null){
+                        let counter = 0;
+                        for(var i=0;i<player2.cards.length;i++){
+                            if(player2.cards[i].color==takiCard.color)
+                                counter++;
+                        }
+                        if(counter > 2){
+                            actions(takiCard, player2, player1 , "player2", "player1");
+                            return;
+                        }
+                    }    
+                }
+
+                let stopCard = player2.searchCard('stop',lastCardObj.color);
+                if (stopCard != null || lastCardObj.type == "stop"){
+                    if (stopCard == null)
+                        stopCard = player2.searchCardByType('stop');
+                    if (stopCard != null)
+                    {
+                        actions(stopCard, player2, player1 , "player2", "player1");
+                        return
+                    }
+                }
+
+                let cdCard = player2.searchCard('changesDirection',lastCardObj.color);
+                if (cdCard != null || lastCardObj.type == "changesDirection"){
+                    if (cdCard == null)
+                        cdCard = player2.searchCardByType('changesDirection');
+                    if (cdCard != null)
+                    {
+                        actions(cdCard, player2, player1 , "player2", "player1");
+                        return;
+                    }
+                }
+
+                let plush2Card = player2.searchCard('2plush',lastCardObj.color);
+                if (plush2Card != null || lastCardObj.type == "2plush"){
+                    if (plush2Card == null)
+                        plush2Card = player2.searchCardByType('2plush');
+                    if (plush2Card != null){
+                        actions(plush2Card, player2, player1 , "player2", "player1");
+                        return;
+                    }
+                }
+
+                let sameCardColor = player2.searchCardByColor(lastCardObj.color);
+                if(sameCardColor != null){
+                    actions(sameCardColor, player2, player1 , "player2", "player1");
+                    return;
+                }
+
+                let sameCardType = player2.searchCardByType(lastCardObj.type);
+                if(sameCardType != null){
+                    actions(sameCardType, player2, player1 , "player2", "player1");
+                    return;
+                }
+
+                let colorCard = player2.searchCardByType("color");
+                if(colorCard != null){
+                    actions(colorCard, player2, player1 , "player2", "player1");
+                    return;
+                }
+
+                getCardFromCashier();
+                
+            }
+
+            // method of computer color selection. 
+            function getMostColor(){
+                let arrayColor = [];
+                arrayColor["red"]= 0
+                arrayColor["blue"]= 0;
+                arrayColor["green"]= 0;
+                arrayColor["yellow"]=0;
+
+
+                for (var i = 0; i < player2.cards.length; i++){
+                    if (player2.cards[i].color == "red"){
+                        arrayColor["red"]++;
+                    }
+                    else if (player2.cards[i].color == "green"){
+                        arrayColor["green"]++;
+                    }
+                    else if (player2.cards[i].color == "yellow"){
+                        arrayColor["yellow"]++;
+                    }
+                    else if (player2.cards[i].color == "blue"){
+                        arrayColor["blue"]++;
+                    }
+                }
+                let max = 0;
+                let choosen;
+                for (var k in arrayColor){
+                    if(max <= arrayColor[k]){
+                        choosen = k;
+                        max = arrayColor[k];
+                    }
+                }
+                return choosen;
+            }
+
+            // get card to player when he click on cashier.
+            //@checkDivPlayer - represents the player1's div, and we checked who got the class "turn".
+            //@currentP- represents the current player that clicked the cashier.
+            //@strCurnP- represents the current player string.
+            function getCardFromCashier(){
+                var checkDivPlayer = document.getElementById("player1");
+                var currentP;
+                var strCurnP;
+                //if player1's div class is "turn" so it's his turn.
+                if (checkDivPlayer.className == "turn"){
+                    currentP = player1;
+                    strCurnP = "player1";
+                }
+                else{
+                    var currentP = player2;
+                    var strCurnP = "player2";
+                }
+                //If cashier cards length is 0 so we need to fill it.
+                if (cashier.cards.length == 0){
+                    fillCashier();
+                }
+                
+                if (cashier.cards.length > 0){
+                    currentP.addCard(cashier.pop());
+                    showCards();
+                    disablePlayer(strCurnP);
+                    saveGame();
+                    if (strCurnP == "player1"){
+                        setTimeout("computer()", 2000);
+                    }
+                    return;
+                }
+                alert("The cashier is out of cards, all the cards is with you and with other player. You are moved to home page.");
+                homePage();
+            }
+
+            // disable player from click because it's not he's turn.
+            function disablePlayer(str){
+                var divPlayer = document.getElementById(str);
+                divPlayer.className = "center";
+                if (str == "player1"){
+                    var images = divPlayer.getElementsByTagName("img");
+                    for (var i = 0; i < images.length; i++){
+                        images[i].onclick = false;
+                    }
+                    document.getElementById("Cashier").onclick = false;
+                }
+            }
+
+            // filled cashier from table deck array.
+            function fillCashier(){
+                for (var i = 0; i < tableDeck.length - 1; i++){
+                    cashier.addCard(tableDeck[i]);
+                }
+                cashier.shuffle();
+                var lastCard = tableDeck[tableDeck.length - 1];
+                tableDeck = [];
+                tableDeck.push(lastCard);
+            }
+
+            // print 4 radio button of the colors and button of chose.
+            //@strPlayer- represents the player's string that clicked the img color.
+            //@str-represents an h1 object which is created dynamically=+representing the radio buttons+ 1 button.
+            function chooseColor(){
+                showCards();
+                if (checkWinner()){
+                    return;
+                }
+                disablePlayer("player1");
+                disablePlayer("player2");
+                strPlayer= "player1";
+                document.getElementById("Cashier").onclick = false;
+                str = "<br><h1>" + strPlayer + ", you need to choose a color</h1>";
+                for (var i = 0; i < colors.length;i++){
+                    str += '<input type="radio" name="color" value="'+colors[i]+'"><span class = "' + colors[i]+ '">' +colors[i]+ '     </span>';
+                }
+                str += '<br><br><input id="clickColor" type="button" value="choose">'
+                document.getElementById("color").innerHTML = str;
+                document.getElementById("clickColor").addEventListener ("click", function(){getColor(strPlayer)}, false);;
+            }
+
+            // onclick event that save the color choosen because color changer card.
+            function getColor(playerToDisable){
+                var selectedRadio = document.querySelector('input[type=radio]:checked');
+                chosenColor = selectedRadio.value;
+                alert("Now, the other player need to put only " + chosenColor + " cards.");
+                showCards();
+                disablePlayer(playerToDisable);
+                saveGame();
+                setTimeout("computer()", 2000);
+            }
+
+            // print who win and print start over button.
+            function checkWinner(){
+                var end ='';
+                if (player1.cards.length == 0){
+                    end = '<div class="center"> <h1> You are the winner! </h1> <img class ="king" src="images/king.jpg"/> </div> ';
+                }
+                else if (player2.cards.length == 0){
+                    end = '<div class="center"> <h1> Computer is the winner! </h1> <img class ="king" src="images/king.jpg"/> </div>';
+                }
+                else{
+                    return false;
+                }
+                end += '<div class="center"><input type="button" value ="Home page" onclick="homePage()"></div>';
+                document.getElementById("Deck").innerHTML = end;
+                localStorage.clear();
+                boolStart = false;
+                return true;
+            }
+
+    </script>
+</head>
+<body onload="start()">
+    <div id="Deck"></div>
+</body>
+</html>
