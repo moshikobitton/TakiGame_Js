@@ -159,12 +159,12 @@
 
         // show all the cards on the screen.
         function showCards() {
-            var str = '<div id="player1" class="turn"> <h3>Player1</h3>';
+            var str = '<div id="player1" class="turn"> <h3 class="font">Player1</h3>';
             str += player1.render();//render is method that creates the img objects.
             str += '</div><div class="center"><img id="Cashier" src="images/cashier.jpg" onclick = "getCardFromCashier()"/>';
             str += '<img src="' + tableDeck[tableDeck.length - 1].image + '"/>' + '</div><div id="player2" class="turn">';
             str += player2.renderWOclick();
-            str += '<h3>Computer</h3> </div> <div id="color" class="center"></div> <br>';
+            str += '<h3 class="font">Computer</h3> </div> <div id="color" class="center"></div> <br>';
             str += '<br><div class ="center"> <hr><input type ="button" value="Home page" onclick="homePage()"> <br><br> <input type ="button" value="New game" onclick="newGame()"> </div>';
             document.getElementById("Deck").innerHTML = str;
         }
@@ -207,7 +207,7 @@
                 array.forEach(clearTimeout);
             }
             boolStart = false;
-            document.getElementById("Deck").innerHTML = '<div class="center"><h1>Welcome to our Taki game!</h1> <img class="big" src="images/taki.jpg"/> <br> (You got a frame? It' + "'" + 's your turn!) <br><br><input type="button" value="Previous game" onclick="previousGame()"></div>';
+            document.getElementById("Deck").innerHTML = '<div class="center"><h1>Welcome to our Taki game!</h1> <img class="big" src="images/taki.jpg"/> <br> <p class="font">(You got a frame? It' + "'" + 's your turn!) </p><br><br><input type="button" value="Previous game" onclick="previousGame()"></div>';
             document.getElementById("Deck").innerHTML += '<br><div class = "center"><input type="button" value="New game" onclick="newGame()"> </div>';
             return;
         }
@@ -632,21 +632,20 @@
             disablePlayer("player2");
             strPlayer = "player1";
             document.getElementById("Cashier").onclick = false;
-            str = "<br><h1>" + strPlayer + ", you need to choose a color</h1>";
+            str = "<br><h1>You need to choose a color!</h1>";
             for (let i = 0; i < colors.length; i++) {
-                str += '<input type="radio" name="color" value="' + colors[i] + '"><span class = "' + colors[i] + '">' + colors[i] + '     </span>';
+                str += '<input type="button" id="'+ colors[i]+'" class="btn '+colors[i]+'" value="' + colors[i] + '">';
             }
-            str += '<br><br><input id="clickColor" type="button" value="choose">'
             document.getElementById("color").innerHTML = str;
-            document.getElementById("clickColor").addEventListener("click", function () { getColor(strPlayer) }, false);;
+            for (let i = 0; i < colors.length; i++) {
+                document.getElementById(colors[i]).addEventListener("click", function () { getColor(strPlayer,colors[i]) }, false);
+            }
         }
 
         // onclick event that save the color choosen because color changer card.
-        function getColor(playerToDisable) {
-            let selectedRadio = document.querySelector('input[type=radio]:checked');
-            chosenColor = selectedRadio.value;
+        function getColor(playerToDisable,colorForPlay) {
             swal({ // this will open a dialouge
-                title: "Color was choosen,color is " + chosenColor,
+                title: "Color was choosen,color is " + colorForPlay,
                 text: "",
                 icon: "success",
                 button: true,
